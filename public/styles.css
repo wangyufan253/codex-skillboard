@@ -17,6 +17,20 @@
     #skill-compact .sc-context strong { color:var(--sc-ink); font-weight:400; }
     #skill-compact .sc-sort-note { font-size:12px; white-space:nowrap; }
     #skill-compact .sc-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; align-items:stretch; }
+    #skill-compact .sc-collection { grid-column:1/-1; min-width:0; }
+    #skill-compact .sc-collection>summary { display:flex; align-items:center; gap:10px; min-height:64px; padding:10px 4px; border-top:1px solid var(--sc-line); border-bottom:1px solid var(--sc-line); cursor:pointer; list-style:none; }
+    #skill-compact .sc-collection>summary::-webkit-details-marker { display:none; }
+    #skill-compact .sc-collection>summary::before { content:''; width:7px; height:7px; flex:none; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:rotate(-45deg); margin:0 6px 0 2px; }
+    #skill-compact .sc-collection[open]>summary::before { transform:rotate(45deg); }
+    #skill-compact .sc-collection>summary:hover { background:var(--sc-picked); }
+    #skill-compact .sc-collection>summary:focus-visible { outline:2px solid var(--sc-action); outline-offset:3px; }
+    #skill-compact .sc-collection-title { display:grid; min-width:0; flex:1; overflow-wrap:anywhere; }
+    #skill-compact .sc-collection-title strong { font-size:14px; font-weight:600; }
+    #skill-compact .sc-collection-title>span,#skill-compact .sc-collection-meta { font-size:12px; color:var(--sc-muted); }
+    #skill-compact .sc-collection-meta { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:4px 14px; font-variant-numeric:tabular-nums; }
+    #skill-compact .sc-collection-grid { padding:12px 0; }
+    #skill-compact .sc-collection-more { display:flex; align-items:center; gap:12px; padding-bottom:12px; color:var(--sc-muted); font-size:12px; }
+    @media(max-width:560px) { #skill-compact .sc-collection>summary { flex-wrap:wrap; gap:6px; } #skill-compact .sc-collection-title { flex-basis:calc(100% - 26px); } #skill-compact .sc-collection-meta { padding-left:23px; justify-content:flex-start; } }
     #skill-compact #sc-rec-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
     #skill-compact .sc-card { min-width:0; background:var(--sc-card); border:1.5px solid var(--sc-line); border-radius:12px; padding:var(--sc-pad); display:flex; flex-direction:column; cursor:pointer; transition:border-color .14s ease-out,background-color .14s ease-out; }
     #skill-compact .sc-card:hover { border-color:var(--sc-action); }

@@ -23,6 +23,10 @@ const {server}=createWorkbenchServer(f.app);const normal=server.listeners('reque
 server.on('request',async(req,res)=>{
   try{
     const path=new URL(req.url,'http://localhost').pathname;
+    if(path==='/ui-test-collection'&&req.method==='POST'){
+      for(const s of (await f.app.catalog.scan()).skills)if(s.name!=='pytorch-training')await f.app.preference(s.id,{repo:'owner/collection'});
+      res.writeHead(200,{'Content-Type':'application/json'});res.end('{}');return;
+    }
     if(path==='/ui-test-hook'&&req.method==='POST'){
       await promptHook(f.app,{session_id:'chat-A',cwd:f.home+'/design',prompt:'设计 UI 界面',turn_id:'ui-turn'});
       const id=f.app.store.conversation('chat-A').selection[0];await f.app.load('chat-A',id,'ui-turn');
