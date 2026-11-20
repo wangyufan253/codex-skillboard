@@ -49,6 +49,6 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).hr
   const config=paths();if(!Number.isInteger(config.port)||config.port<1024||config.port>65535)throw new Error('工作台端口无效');
   const {server,app}=createWorkbenchServer(new Workbench(config));
   server.on('error',e=>{console.error(e.message);app.close();process.exitCode=1;});
-  server.listen(config.port,'127.0.0.1',()=>console.log(`Skill 工作台：${webUrl('',config)}`));
+  server.listen(config.port,'127.0.0.1',()=>{console.log(`Skill 工作台：${webUrl('',config)}`);app.startStarsSync();});
   for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>server.close(()=>{app.close();process.exit(0);}));
 }

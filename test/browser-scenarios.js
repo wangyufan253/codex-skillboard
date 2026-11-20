@@ -83,7 +83,9 @@ try{
   assert($('#sc-all-grid .sc-stats').textContent.includes('1,002'),'manual Stars refresh bypasses cache');
   assert($('#sc-status').textContent.includes('1/1'),'Stars refresh reports real request result');
   change('#sc-search','','input');
-  change('#sc-sort','stars');assert($('#sc-result-count').textContent.includes('未知热度'),'unknown Stars remain unknown');
+  change('#sc-sort','stars');assert($('#sc-result-count').textContent.includes('暂无 Stars'),'unavailable Stars sort last');
+  assert($('#sc-all-grid').textContent.includes('未关联仓库'),'missing provenance is distinguished from pending Stars');
+  assert($('#stars-status').textContent.includes('已关联 1/14'),'Stars source coverage is visible');
   assert(!$('#app-alert').textContent,'no runtime error banner');
   assert(document.documentElement.scrollWidth<=window.innerWidth,'no horizontal overflow');
   assert(Number.parseFloat(getComputedStyle($('.sc-desc')).fontSize)>=12,'body text is not tiny');

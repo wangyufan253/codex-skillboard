@@ -3,6 +3,7 @@ import { resolve, join, basename, dirname, relative, isAbsolute } from 'node:pat
 import { createHash } from 'node:crypto';
 import { parse as parseYaml } from 'yaml';
 import { parse as parseToml } from 'smol-toml';
+import { sourceMatch } from './sources.mjs';
 export const categories = [{ id:'design',label:'设计' },{ id:'development',label:'开发' },{ id:'research',label:'研究' },{ id:'documents',label:'文档' },{ id:'other',label:'其他' }];
 export const hash = text => createHash('sha256').update(text).digest('hex');
 export const safeRead = async file => { try { return await readFile(file,'utf8'); } catch(e) { if (e.code === 'ENOENT' || e.code === 'ENOTDIR') return ''; throw e; } };
@@ -52,12 +53,13 @@ export class Catalog {
         try {
           const info=await stat(path);if(info.size>1024*1024)throw new Error('SKILL.md 超过 1 MB');
           const rp=await realpath(path);if(seen.has(rp))continue;
-          const meta=parseSkill(await readFile(path,'utf8'));seen.add(rp);
+          const text=await readFile(path,'utf8'),meta=parseSkill(text);seen.add(rp);
           const id=hash(rp).slice(0,24), pref=preferences[id]||{};
           let repo=pref.repo || null, repoEvidence=repo?'用户指定':null;
           if(!repo&&root===this.config.roots[0]){repo=normalizeRepo(lock[entry.name]?.sourceUrl||lock[entry.name]?.source);if(repo)repoEvidence='安装记录';}
-          if(!repo){const candidate=normalizeRepo(meta.metadata?.source||meta.metadata?.repository||meta.repository);if(candidate){repo=candidate;repoEvidence='Skill 元数据';}}
+          if(!repo){const candidate=normalizeRepo(meta.metadata?.source||meta.metadata?.repository||meta.metadata?.official_repository||meta.repository);if(candidate){repo=candidate;repoEvidence='Skill 元数据';}}
           if(!repo){const gitConfig=await safeRead(join(dirname(path),'.git/config'));const remote=gitConfig.match(/\[remote "origin"\][\s\S]*?\burl\s*=\s*([^\r\n]+)/)?.[1];repo=normalizeRepo(remote);if(repo)repoEvidence='Git origin';}
+          if(!repo){const match=sourceMatch(text,this.store);if(match){repo=match.repo;repoEvidence='公开仓库文件哈希一致：'+match.path;}}
           const category=categories.some(c=>c.id===pref.category)?pref.category:classify(meta.name,meta.description);
           const skill={id,name:meta.name.trim(),description:meta.description.trim(),path,realPath:rp,root,directory:root===this.config.roots[0]?'共享目录':root===this.config.roots[1]?'个人目录':'自定义目录',category,categoryInferred:!pref.category,repo,repoEvidence,modifiedAt:info.mtime.toISOString(),registered:null,runtimeEnabled:null};
           skill.globalEnabled=globalEnabled(config,skill);skills.push(skill);
