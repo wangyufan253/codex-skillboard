@@ -1,0 +1,14 @@
+node_modules/
+.local/
+coverage/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+.impeccable/
+.taste-skill/
+.codex/
+.agents/
+*.sqlite
+*.sqlite-*

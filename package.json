@@ -1,0 +1,28 @@
+{
+  "name": "codex-skillboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A local-first skill workbench for Codex: discover, recommend and select skills per conversation.",
+  "license": "MIT",
+  "author": "wangyufan253",
+  "repository": { "type": "git", "url": "https://github.com/wangyufan253/codex-skillboard.git" },
+  "homepage": "https://github.com/wangyufan253/codex-skillboard#readme",
+  "bugs": { "url": "https://github.com/wangyufan253/codex-skillboard/issues" },
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "node server/http.mjs",
+    "dev": "node --watch server/http.mjs",
+    "test": "node --test test/*.test.mjs",
+    "test:ui:serve": "node scripts/ui-test-server.mjs",
+    "install:codex": "node scripts/install.mjs",
+    "uninstall:codex": "node scripts/install.mjs --uninstall",
+    "mcp": "node server/mcp.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "smol-toml": "^1.4.2",
+    "yaml": "^2.8.2",
+    "zod": "^4.1.0"
+  }
+}

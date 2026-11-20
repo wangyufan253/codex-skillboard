@@ -1,0 +1,28 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { writeFile,readFile } from 'node:fs/promises';
+import { parse } from 'smol-toml';
+import { fixture } from './helpers.mjs';
+import { createWorkbenchServer } from '../server/http.mjs';
+import { projectRoot } from '../server/paths.mjs';
+test('installer is idempotent and uninstall preserves unrelated MCP and hooks',async t=>{
+  const f=await fixture(t);
+  await writeFile(f.config.config,'model = "test"\n[mcp_servers.unrelated]\ncommand = "example"\nargs = []\n');
+  const original={hooks:{PostToolUse:[{matcher:'Write',hooks:[{type:'command',command:'echo existing'}]}]}};
+  await writeFile(f.config.codex+'/hooks.json',JSON.stringify(original));
+  const {server}=createWorkbenchServer(f.app);await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>new Promise(r=>server.close(r)));
+  const env={...process.env,CODEX_HOME:f.config.codex,SKILL_WORKBENCH_HOME:f.config.data,SKILL_WORKBENCH_USER_HOME:f.home,SKILL_WORKBENCH_PORT:String(server.address().port),CODEX_THREAD_ID:'installer-test-chat'};
+  const run=args=>promisify(execFile)(process.execPath,[projectRoot+'/scripts/install.mjs',...args],{cwd:projectRoot,env,timeout:25000});
+  await run([]);await run([]);
+  const hooks=JSON.parse(await readFile(f.config.codex+'/hooks.json','utf8'));
+  assert.equal(hooks.hooks.UserPromptSubmit.length,1);assert.equal(hooks.hooks.PostToolUse.length,2);assert.deepEqual(hooks.hooks.PostToolUse[0],original.hooks.PostToolUse[0]);
+  assert.match('exec_command',new RegExp(hooks.hooks.PostToolUse[1].matcher));
+  const installed=parse(await readFile(f.config.config,'utf8'));assert.ok(installed.mcp_servers['skill-workbench']);assert.equal(installed.mcp_servers.unrelated.command,'example');
+  assert.deepEqual(installed.mcp_servers.unrelated.args,[]);
+  await run(['--uninstall']);
+  const config=parse(await readFile(f.config.config,'utf8'));assert.equal(config.mcp_servers['skill-workbench'],undefined);assert.equal(config.mcp_servers.unrelated.command,'example');
+  assert.deepEqual(config.mcp_servers.unrelated.args,[]);
+  assert.deepEqual(JSON.parse(await readFile(f.config.codex+'/hooks.json','utf8')),original);
+});

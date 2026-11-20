@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="本机个人 Skill 的推荐、选择、全局启停与使用统计。">
+  <title>Codex Skillboard</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <main id="skill-compact" aria-label="本机 Skill 工作台">
+    <section class="sc-shell">
+      <header class="sc-header">
+        <h2>Skillboard</h2>
+        <nav class="sc-tabs" role="tablist" aria-label="Skill 视图">
+          <button id="sc-tab-rec" class="sc-tab" type="button" role="tab" aria-controls="sc-panel-rec" aria-selected="true">本对话推荐 <span id="sc-rec-count">—</span></button>
+          <button id="sc-tab-all" class="sc-tab" type="button" role="tab" aria-controls="sc-panel-all" aria-selected="false">全部 Skill <span id="sc-total-count">—</span></button>
+        </nav>
+      </header>
+      <div id="app-alert" class="app-alert" role="alert" hidden></div>
+      <div class="app-context">
+        <div class="app-location">
+          <label class="app-field">项目<select id="project" class="sc-select" aria-label="选择项目"><option value="">请选择项目</option></select></label>
+          <label class="app-field">对话<select id="conversation" class="sc-select" aria-label="绑定 Codex 对话" disabled><option value="">请先选择项目</option></select></label>
+        </div>
+      </div>
+      <div id="conversation-scope" class="app-scope">项目仅用于分组，Skill 选择只应用于选中的对话。</div>
+      <details id="conversation-info" class="app-connection" hidden><summary>对话信息</summary><div id="conversation-info-content"></div></details>
+      <details class="app-connection" id="connection">
+        <summary id="connection-summary">正在连接本机服务…</summary>
+        <div id="connection-details"></div>
+      </details>
+      <section id="sc-panel-rec" role="tabpanel" aria-labelledby="sc-tab-rec">
+        <details id="manual-recommend" class="app-connection"><summary>手动查询推荐</summary><form id="task-form" class="app-task"><label class="app-field">查询用途<input id="task" class="sc-search" maxlength="1200" placeholder="例如：检查界面排版" autocomplete="off"></label><button id="recommend" type="submit" class="sc-text-btn">查询推荐</button></form></details>
+        <div class="app-section-line"><span>按任务匹配程度排列；勾选仅用于当前对话。</span><button id="refresh" class="sc-text-btn" type="button">刷新目录</button></div>
+        <div id="sc-rec-grid" class="sc-grid"><div class="sc-empty">正在扫描个人 Skill 目录…</div></div>
+      </section>
+      <section id="sc-panel-all" role="tabpanel" aria-labelledby="sc-tab-all" hidden>
+        <div id="sc-categories" class="sc-categories" role="group" aria-label="按用途分类筛选"></div>
+        <div class="sc-controls">
+          <input id="sc-search" class="sc-search" type="search" aria-label="搜索 Skill 名称或用途" placeholder="搜索名称或用途">
+          <select id="sc-directory" class="sc-select" aria-label="筛选安装目录"><option value="all">全部目录</option><option>个人目录</option><option>共享目录</option><option>自定义目录</option></select>
+          <select id="sc-sort" class="sc-select" aria-label="排序方式"><option value="match">推荐度</option><option value="name">名称</option><option value="usage">观察到读取次数</option><option value="selected">选用次数</option><option value="stars">来源仓库 Stars</option></select>
+          <select id="period" class="sc-select" aria-label="统计时间"><option value="30">近 30 天</option><option value="all">安装以来</option></select>
+          <button id="sync-stars" class="sc-text-btn" type="button">更新仓库 Stars</button>
+        </div>
+        <div class="sc-count" id="sc-result-count"></div>
+        <div id="sc-all-grid" class="sc-grid"></div>
+        <div class="sc-pages"><span id="sc-range"></span><div class="sc-page-actions"><button id="sc-prev" class="sc-text-btn" type="button">上一页</button><span id="sc-page-number"></span><button id="sc-next" class="sc-text-btn" type="button">下一页</button></div></div>
+      </section>
+      <footer class="sc-footer">
+        <div class="sc-footer-row"><span id="sc-selection" class="sc-selection">本对话已选 <strong>0</strong> 项</span><div class="sc-actions"><button id="sc-clear" class="sc-text-btn" type="button" disabled>清除选择</button><button id="sc-save" class="sc-primary" type="button" disabled>保存选择</button></div></div>
+        <div id="sc-chips" class="sc-chips" hidden></div>
+        <div id="sc-evidence-summary" class="sc-status" aria-live="polite"></div>
+        <div id="sc-status" class="sc-status" role="status" aria-live="polite">选择绑定的聊天后，可保存本对话需要的 Skill。</div>
+      </footer>
+      <div class="sc-note" id="coverage">只展示个人安装项。允许自动选用不代表已加载；说明交付和读取观测不代表执行成功。</div>
+    </section>
+    <dialog id="skill-dialog" aria-labelledby="detail-title">
+      <form id="detail-form">
+        <div class="app-dialog-heading"><h3 id="detail-title"></h3><button id="detail-close" class="sc-text-btn" type="button">关闭</button></div>
+        <p id="detail-description"></p>
+        <div class="app-detail-path" id="detail-path"></div>
+        <div class="app-detail-stats" id="detail-stats"></div>
+        <label class="app-field">分类<select id="detail-category" class="sc-select"></select></label>
+        <label class="app-field">来源 GitHub 仓库<input id="detail-repo" class="sc-search" placeholder="owner/repo 或仓库首页地址" autocomplete="off"></label>
+        <div class="sc-note" id="detail-source"></div>
+        <div class="app-dialog-actions"><button type="button" id="view-source" class="sc-text-btn">查看完整说明</button><button type="submit" id="save-detail" class="sc-primary">保存信息</button></div>
+        <div class="sc-status" id="detail-status" role="status" aria-live="polite"></div>
+        <pre id="skill-source" hidden></pre>
+      </form>
+    </dialog>
+  </main>
+</body>
+</html>
