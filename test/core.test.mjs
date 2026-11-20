@@ -36,6 +36,7 @@ test('conversation-only use of globally disabled skill never modifies config or 
   const a=await promptHook(f.app,{session_id:'A',cwd:f.home,prompt:'continue',turn_id:'t1'});const b=await promptHook(f.app,{session_id:'B',cwd:f.home,prompt:'continue',turn_id:'t1'});
   assert.match(a.hookSpecificOutput.additionalContext,/# Workflow/);assert.doesNotMatch(b.hookSpecificOutput.additionalContext,/# Workflow/);assert.deepEqual(f.app.store.conversation('B').selection,[]);assert.equal(await readFile(f.config.config,'utf8'),original);
   assert.equal(f.app.store.stats()[id].selected,1);assert.equal(f.app.store.stats()[id].injected,1);assert.equal(f.app.store.stats()[id].loaded,undefined);
+  assert.equal(f.app.store.stats()[id].delivered,1,'Hook instruction output is visible as delivery, not a separate read');
   await promptHook(f.app,{session_id:'A',cwd:f.home,prompt:'continue',turn_id:'t1'});assert.equal(f.app.store.stats()[id].injected,1);
 });
 test('load counts require evidence and deduplicate within a turn',async t=>{
@@ -53,6 +54,7 @@ test('repository cache groups requests, preserves last good value on failure and
   const f=await fixture(t);await f.skill('one','one');await f.skill('two','two');const {skills}=await f.app.catalog.scan();for(const s of skills)await f.app.preference(s.id,{repo:'owner/repo'});
   let requests=0;const fetcher=async()=>{requests++;return {ok:true,json:async()=>({stargazers_count:45})};};
   await f.app.stars({fetcher});await f.app.stars({fetcher});assert.equal(requests,1);assert.equal(f.app.store.repo('owner/repo').stars,45);
+  await f.app.stars({force:true,fetcher});assert.equal(requests,2,'forced refresh really requests even a fresh cache');
   await f.app.stars({force:true,fetcher:async()=>{throw new Error('offline');}});assert.equal(f.app.store.repo('owner/repo').stars,45);assert.equal(f.app.store.repo('owner/repo').status,'error');
 });
 
@@ -81,4 +83,15 @@ test('conversation states distinguish saved selection, delivered instructions an
   assert.ok((await state('A')).readAt);assert.deepEqual(await state('B'),{selected:false,deliveredAt:null,readAt:null});
   await f.app.load('B',id,'two');assert.ok((await state('B')).deliveredAt);assert.ok((await state('B')).readAt);assert.equal((await state('B')).selected,false);
   await f.app.select('A',[]);assert.equal((await state('A')).selected,false);assert.ok((await state('A')).deliveredAt,'clearing selection cannot retract historical delivery');
+});
+test('delivery counters deduplicate Hook and MCP in one turn, independently of observed reads',async t=>{
+  const f=await fixture(t);const path=await f.skill('demo','Task workflow'),id=(await f.app.catalog.scan()).skills[0].id;
+  f.app.store.touchConversation({id:'A',cwd:f.home,prompt:'task'});await f.app.select('A',[id]);
+  await promptHook(f.app,{session_id:'A',cwd:f.home,prompt:'continue',turn_id:'one'});assert.equal(f.app.store.stats()[id].delivered,1);assert.equal(f.app.store.stats()[id].loaded,undefined);
+  await f.app.load('A',id,'one');await f.app.load('A',id,'one');assert.equal(f.app.store.stats()[id].delivered,1);assert.equal(f.app.store.stats()[id].loaded,1);
+  await f.app.load('A',id,'two');assert.equal(f.app.store.stats()[id].delivered,2);
+  await observeHook(f.app,{session_id:'B',cwd:f.home,turn_id:'three',tool_name:'exec_command',tool_input:{cmd:`cat '${path}'`},tool_response:{exit_code:0}});
+  assert.equal(f.app.store.conversationEvidence('B')[id].deliveredAt,null);
+  f.app.store.touchConversation({id:'B',cwd:f.home,prompt:'task'});await f.app.load('B',id,'three');
+  assert.ok(f.app.store.conversationEvidence('B')[id].deliveredAt,'MCP delivery is retained even when the read was already observed');assert.equal(f.app.store.stats()[id].delivered,3);
 });

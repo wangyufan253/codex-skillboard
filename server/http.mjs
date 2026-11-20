@@ -33,7 +33,7 @@ export function createWorkbenchServer(app=new Workbench()){
           const skill=await app.catalog.get(body.skillId);const result=await app.codex.setGlobal(skill,body.enabled);await app.catalog.scan(true);app.runtimeCache.clear();return json(res,result);
         }
         if(url.pathname==='/api/preference'){await app.preference(body.skillId,{category:body.category,repo:body.repo});return json(res,{saved:true});}
-        if(url.pathname==='/api/stars')return json(res,await app.stars());
+        if(url.pathname==='/api/stars')return json(res,await app.stars({force:true}));
         if(url.pathname==='/api/recommend')return json(res,await app.snapshot({conversationId:body.conversationId,task:String(body.task||''),runtime:false}));
         throw new Error('未知操作');
       }

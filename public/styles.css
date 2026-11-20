@@ -124,6 +124,7 @@ body{background:Canvas}
 #skill-compact .app-detail-button{font-size:12px;padding:0}
 #skill-compact .sc-evidence{display:flex;flex-wrap:wrap;gap:3px 10px;margin:8px 0;color:var(--sc-muted);font-size:12px;line-height:1.5}
 #skill-compact .sc-evidence [data-active="true"]{color:var(--sc-ink);font-weight:600}
+#skill-compact .sc-metrics{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--sc-muted);font-size:12px;font-variant-numeric:tabular-nums;margin-top:6px}
 #skill-compact .sc-chip button{font:inherit;display:inline;padding:0}
 #skill-compact .sc-check:disabled{cursor:default;opacity:.65}
 #skill-compact .sc-card:has(.sc-check:disabled){cursor:default}

@@ -34,6 +34,8 @@ try{
   $('#sc-tab-all').click();
   assert($('#conversation').selectedOptions[0].textContent==='界面设计','conversation title stays stable after new messages');
   assert($('#sc-all-grid [data-state="read"]').textContent==='观察到读取','read evidence rendered');
+  assert($('#sc-all-grid [data-metric="delivered"]').textContent==='累计交付 1','delivery count is shown independently and deduplicates the same turn');
+  assert($('#sc-all-grid [data-metric="reads"]').textContent==='累计读取 1','observed read count is shown independently');
   assert($('#sc-evidence-summary').textContent.includes('说明已交付 1 项'),'conversation summary counts delivered skills');
   $('#sc-all-grid [data-skill]').click();
   change('#project','dev-project');await until(()=>$('#conversation').querySelector('option[value="chat-B"]'));
@@ -75,6 +77,11 @@ try{
   const updated=(await state('chat-A')).skills.find(s=>s.name==='frontend-design');assert(updated.category==='documents'&&updated.repo==='owner/repository','category and repository preferences persist');
   assert(updated.stats.loaded===1,'human source inspection does not add Codex usage');
   $('#detail-close').click();assert(!$('#skill-dialog').open,'dialog closes');
+  $('#sync-stars').click();await until(async()=>(await state('chat-A')).skills.find(s=>s.name==='frontend-design').stars?.stars===1001);await until(()=>!$('#sync-stars').disabled);
+  assert($('#sc-all-grid .sc-stats').textContent.includes('1,001'),'Stars show exact values instead of rounding away changes');
+  $('#sync-stars').click();await until(async()=>(await state('chat-A')).skills.find(s=>s.name==='frontend-design').stars?.stars===1002);await until(()=>!$('#sync-stars').disabled);
+  assert($('#sc-all-grid .sc-stats').textContent.includes('1,002'),'manual Stars refresh bypasses cache');
+  assert($('#sc-status').textContent.includes('1/1'),'Stars refresh reports real request result');
   change('#sc-search','','input');
   change('#sc-sort','stars');assert($('#sc-result-count').textContent.includes('未知热度'),'unknown Stars remain unknown');
   assert(!$('#app-alert').textContent,'no runtime error banner');

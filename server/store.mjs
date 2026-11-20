@@ -45,14 +45,19 @@ export class Store {
   stats(days = 30) {
     const since = days ? new Date(Date.now() - days * 86400000).toISOString() : '';
     const rows = this.db.prepare('SELECT skillId,kind,count(*) AS total FROM events WHERE at>=? AND skillId IS NOT NULL GROUP BY skillId,kind').all(since);
-    const data = {}; for (const r of rows) (data[r.skillId] ||= {})[r.kind] = Number(r.total); return data;
+    const data = {}; for (const r of rows) (data[r.skillId] ||= {})[r.kind] = Number(r.total);
+    const deliveries=this.db.prepare(`SELECT skillId,count(*) AS total FROM (
+      SELECT skillId,conversationId,COALESCE(turnId,eventKey) AS deliveryTurn FROM events
+      WHERE at>=? AND skillId IS NOT NULL AND (kind IN ('injected','delivered') OR (kind='loaded' AND evidence='MCP 已返回完整 SKILL.md'))
+      GROUP BY skillId,conversationId,deliveryTurn) GROUP BY skillId`).all(since);
+    for(const r of deliveries)(data[r.skillId] ||= {}).delivered=Number(r.total);return data;
   }
   conversationEvidence(id) {
     if(!id)return {};
     const rows=this.db.prepare(`SELECT skillId,
-      MAX(CASE WHEN kind='injected' OR (kind='loaded' AND evidence='MCP 已返回完整 SKILL.md') THEN at END) AS deliveredAt,
+      MAX(CASE WHEN kind IN ('injected','delivered') OR (kind='loaded' AND evidence='MCP 已返回完整 SKILL.md') THEN at END) AS deliveredAt,
       MAX(CASE WHEN kind='loaded' THEN at END) AS readAt
-      FROM events WHERE conversationId=? AND skillId IS NOT NULL AND kind IN ('injected','loaded') GROUP BY skillId`).all(id);
+      FROM events WHERE conversationId=? AND skillId IS NOT NULL AND kind IN ('injected','delivered','loaded') GROUP BY skillId`).all(id);
     return Object.fromEntries(rows.map(r=>[r.skillId,{deliveredAt:r.deliveredAt,readAt:r.readAt}]));
   }
   preferences() { return Object.fromEntries(this.db.prepare('SELECT * FROM preferences').all().map(r => [r.skillId, r])); }
