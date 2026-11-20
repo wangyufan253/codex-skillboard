@@ -1,7 +1,7 @@
 import { Store } from './store.mjs';
 import { Catalog, categories, normalizeRepo, hash } from './catalog.mjs';
 import { CodexClient } from './codex.mjs';
-import { recommend, userTask } from './recommend.mjs';
+import { userTask } from './messages.mjs';
 import { paths, webUrl } from './paths.mjs';
 import { conversationDirectory } from './conversations.mjs';
 import { HOUR,githubJson,refreshSources } from './sources.mjs';
@@ -27,7 +27,7 @@ export class Workbench {
     if(current&&!known.some(c=>c.id===current.id))known.unshift(current);
     return {...conversationDirectory(this.directoryCache,known,currentId),status:{verified:this.directoryCache.verified,error:this.directoryCache.error}};
   }
-  async snapshot({conversationId='',task='',refresh=false,runtime=true,days=30}={}){
+  async snapshot({conversationId='',refresh=false,runtime=true,days=30}={}){
     const directory=await this.conversations(conversationId,refresh),entry=directory.conversations.find(c=>c.id===conversationId);
     if(entry&&!this.store.conversation(conversationId))this.store.touchConversation({id:entry.id,cwd:entry.cwd,prompt:entry.prompt});
     const base=await this.catalog.scan(refresh),catalog={...base,skills:base.skills.map(s=>({...s}))},c=this.store.conversation(conversationId),cwd=c?.cwd||this.config.home;
@@ -38,7 +38,7 @@ export class Workbench {
     }
     const stats=this.store.stats(days),preferences=this.store.preferences(),evidence=this.store.conversationEvidence(conversationId);
     const skills=catalog.skills.map(s=>({...s,conversationState:{selected:!!c?.selection.includes(s.id),deliveredAt:evidence[s.id]?.deliveredAt||null,readAt:evidence[s.id]?.readAt||null},stats:{loaded:stats[s.id]?.loaded||0,selected:stats[s.id]?.selected||0,injected:stats[s.id]?.injected||0,delivered:stats[s.id]?.delivered||0},stars:s.repo?this.store.repo(s.repo):null}));
-    return {...catalog,skills,categories,starsSync:{...this.store.setting('starsSync',{}),running:!!this.starsFlight,automatic:!!this.starsAutomatic,nextAt:this.starsNextAt||null,retryAt:this.store.setting('githubRetryAt',null)},conversation:c?{...c,...entry,prompt:userTask(c.prompt)}:null,conversations:directory.conversations,projects:directory.projects,conversationDirectoryStatus:directory.status,recommendations:recommend(skills,task||c?.prompt||''),runtimeStatus,url:webUrl(conversationId,this.config),statistics:{since:this.store.setting('trackingSince'),days,coverage:'MCP 返回说明及 Hook 可确认的文件读取；不覆盖全部使用'},integration:{...this.store.setting('integration',{}),hookObserved:!!c?.lastHook},preferences};
+    return {...catalog,skills,categories,starsSync:{...this.store.setting('starsSync',{}),running:!!this.starsFlight,automatic:!!this.starsAutomatic,nextAt:this.starsNextAt||null,retryAt:this.store.setting('githubRetryAt',null)},conversation:c?{...c,...entry,prompt:userTask(c.prompt)}:null,conversations:directory.conversations,projects:directory.projects,conversationDirectoryStatus:directory.status,runtimeStatus,url:webUrl(conversationId,this.config),statistics:{since:this.store.setting('trackingSince'),days,coverage:'MCP 返回说明及 Hook 可确认的文件读取；不覆盖全部使用'},integration:{...this.store.setting('integration',{}),hookObserved:!!c?.lastHook},preferences};
   }
   async select(conversationId,ids){
     if(!Array.isArray(ids)||ids.length>24||!ids.every(id=>typeof id==='string'))throw new Error('每个对话最多选择 24 个 Skill');

@@ -20,7 +20,7 @@ export function createWorkbenchServer(app=new Workbench()){
       const url=new URL(req.url,origin);
       if(req.method==='GET'&&url.pathname==='/api/health')return json(res,{app:'skill-workbench',instance:instanceId(app.config),version:'0.1.0'});
       if(req.method==='GET'&&url.pathname==='/api/bootstrap')return json(res,{token,version:'0.1.0',categories:(await app.snapshot({runtime:false})).categories,conversationId:url.searchParams.get('conversation')||null});
-      if(req.method==='GET'&&url.pathname==='/api/state')return json(res,await app.snapshot({conversationId:url.searchParams.get('conversation')||'',task:url.searchParams.get('task')||'',refresh:url.searchParams.get('refresh')==='1',days:url.searchParams.get('days')==='all'?0:30}));
+      if(req.method==='GET'&&url.pathname==='/api/state')return json(res,await app.snapshot({conversationId:url.searchParams.get('conversation')||'',refresh:url.searchParams.get('refresh')==='1',days:url.searchParams.get('days')==='all'?0:30}));
       if(req.method==='GET'&&url.pathname==='/api/content'){const {skill,text}=await app.catalog.content(url.searchParams.get('id'));return json(res,{name:skill.name,path:skill.path,text});}
       if(req.method==='POST'&&url.pathname.startsWith('/api/')){
         if(req.headers.origin&&req.headers.origin!==origin&&req.headers.origin!==`http://localhost:${port}`)return json(res,{error:'来源不匹配'},403);
@@ -34,7 +34,6 @@ export function createWorkbenchServer(app=new Workbench()){
         }
         if(url.pathname==='/api/preference'){await app.preference(body.skillId,{category:body.category,repo:body.repo});return json(res,{saved:true});}
         if(url.pathname==='/api/stars')return json(res,await app.stars({force:true}));
-        if(url.pathname==='/api/recommend')return json(res,await app.snapshot({conversationId:body.conversationId,task:String(body.task||''),runtime:false}));
         throw new Error('未知操作');
       }
       const files={'/':['index.html','text/html; charset=utf-8'],'/styles.css':['styles.css','text/css; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8']};

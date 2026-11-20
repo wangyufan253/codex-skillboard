@@ -1,5 +1,5 @@
 import { basename, resolve, sep } from 'node:path';
-import { userTask } from './recommend.mjs';
+import { userTask } from './messages.mjs';
 
 export function conversationDirectory(metadata,known,currentId=''){
   const projects=metadata.projects.map(p=>({id:p.id,name:p.name,roots:p.roots.map(r=>r.path)}));

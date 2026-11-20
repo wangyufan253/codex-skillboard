@@ -2,7 +2,7 @@
   "name": "codex-skillboard",
   "version": "0.1.0",
   "private": true,
-  "description": "A local-first skill workbench for Codex: discover, recommend and select skills per conversation.",
+  "description": "A local-first skill workbench for Codex: discover, browse and select skills per conversation.",
   "license": "MIT",
   "author": "wangyufan253",
   "repository": { "type": "git", "url": "https://github.com/wangyufan253/codex-skillboard.git" },

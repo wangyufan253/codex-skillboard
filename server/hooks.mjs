@@ -1,14 +1,12 @@
 import { realpath } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { recommend, userTask } from './recommend.mjs';
+import { userTask } from './messages.mjs';
 import { hash } from './catalog.mjs';
 import { webUrl } from './paths.mjs';
 export async function promptHook(workbench,event){
   const {session_id:id,cwd,turn_id:turnId}=event;
   const prompt=userTask(event.prompt);
   if(!id||!cwd)return {};
-  const previousTask=userTask(workbench.store.setting('task:'+id,''));
-  const task=prompt.trim().length<24&&previousTask?previousTask+'\n'+prompt:prompt;
   const c=workbench.store.touchConversation({id,cwd,prompt,turnId,fromHook:true});
   const {skills}=await workbench.catalog.scan(true);
   const selected=skills.filter(s=>c.selection.includes(s.id));
@@ -26,13 +24,6 @@ export async function promptHook(workbench,event){
     }catch(e){messages.push(`已选 ${skill.name} 读取失败：${e.message}。不要声称已使用。`);}
   }
   workbench.store.injected(id,c.selectionVersion);
-  const candidates=(prompt?recommend(skills,task,4):[]).filter(s=>!c.selection.includes(s.id));
-  if(candidates.length&&prompt.trim().length>=24)workbench.store.setSetting('task:'+id,prompt);
-  const signature=candidates.map(s=>s.id).join(',');
-  if(signature&&signature!==workbench.store.setting('recommend:'+id,'')){
-    workbench.store.setSetting('recommend:'+id,signature);
-    messages.push('本轮出现以下适用候选。用简短中文给出推荐和工作台链接，让用户选择；推荐本身不代表已选用，不自动改变全局配置，不反复询问相同候选。保留 Codex 自身按需要选用其他可用 Skill 的能力。\n'+candidates.map(r=>`${r.rank}. ${skills.find(s=>s.id===r.id).name}：${r.reason}；skillId=${r.id}`).join('\n'));
-  }
   return {hookSpecificOutput:{hookEventName:'UserPromptSubmit',additionalContext:messages.join('\n\n')}};
 }
 function knownSuccess(response){

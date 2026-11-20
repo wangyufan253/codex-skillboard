@@ -16,9 +16,8 @@ sensitive Codex configuration. These files are excluded from Git. Do not attach
 the database, configuration backups or unsanitized logs to a public issue.
 Screenshots may also reveal project names, conversation names and local paths.
 
-Recommendations run locally. GitHub Stars queries send the confirmed public
-repository identifier to `api.github.com`; skill and conversation contents are
-not included. Selected skills are instructions supplied to Codex and may refer
+GitHub queries send source repository identifiers to `api.github.com` for
+Stars and public file trees; skill and conversation contents are not included. Selected skills are instructions supplied to Codex and may refer
 to scripts or external tools: inspect third-party skills before selecting them.
 
 Report ordinary bugs with a sanitized reproduction in GitHub Issues. For a

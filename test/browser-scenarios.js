@@ -10,9 +10,10 @@ try{
   assert($('#conversation').value==='chat-A','bind explicit conversation');
   assert($('#project').value==='design-project','current conversation selects its project');
   assert($('#conversation').selectedOptions[0].textContent==='界面设计','real conversation title without serial number');
-  assert(!$('.app-context').contains($('#task')),'project-conversation navigation contains no task input');
-  assert($('#task').value==='','latest message is not shown as task or conversation identity');
-  assert($('#sc-panel-rec').contains($('#task')),'manual recommendation query belongs to recommendation view');
+  assert(!$('#task')&&!$('#sc-panel-rec'),'task recommendation controls are removed');
+  assert(!root.querySelector('[role="tablist"]'),'catalog no longer has a recommendation tab');
+  assert(!$('#sc-panel-all').hidden&&$('#sc-sort').value==='name','catalog opens directly in name order');
+  assert(!$('#sc-sort option[value="match"]'),'recommendation ranking is removed');
   assert(![...$('#conversation').options].some(o=>o.value==='chat-B'),'conversation list belongs to selected project');
   assert(root.querySelectorAll('#sc-all-grid [data-card]').length===12,'12 cards per page');
   change('#sc-search','frontend-design','input');
@@ -29,9 +30,8 @@ try{
   assert($('#sc-status').textContent.includes('下一条消息'),'saved selection waits for next message');
   assert($('#sc-all-grid [data-state="selection"]').textContent==='本对话已选','saved selection label');
   assert($('#sc-all-grid [data-state="read"]').textContent==='未观察到读取','selection alone is not a read');
-  await fetch('/ui-test-hook',{method:'POST'});$('#sc-tab-rec').click();$('#manual-recommend').open=true;$('#recommend').click();
+  await fetch('/ui-test-hook',{method:'POST'});$('#refresh').click();
   await until(()=>$('#sc-all-grid [data-state="delivery"]').textContent==='说明已交付');
-  $('#sc-tab-all').click();
   assert($('#conversation').selectedOptions[0].textContent==='界面设计','conversation title stays stable after new messages');
   assert($('#sc-all-grid [data-state="read"]').textContent==='观察到读取','read evidence rendered');
   assert($('#sc-all-grid [data-metric="delivered"]').textContent==='累计交付 1','delivery count is shown independently and deduplicates the same turn');

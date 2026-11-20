@@ -11,9 +11,10 @@ test('MCP transport exposes working tools and returns full selected instructions
   const client=new Client({name:'workbench-integration-test',version:'1.0.0'});
   const transport=new StdioClientTransport({command:process.execPath,args:[projectRoot+'/server/mcp.mjs'],env:{...process.env,CODEX_HOME:f.config.codex,SKILL_WORKBENCH_HOME:f.config.data,SKILL_WORKBENCH_USER_HOME:f.home}});
   await client.connect(transport);t.after(()=>client.close());
-  const tools=await client.listTools();assert.equal(tools.tools.length,6);
-  const recommended=await client.callTool({name:'recommend_skills',arguments:{task:'设计 UI 界面',conversationId:'chat-A'}});
-  assert.equal(recommended.isError,undefined);assert.match(recommended.content[0].text,/frontend-design/);
+  const tools=await client.listTools();assert.equal(tools.tools.length,5);
+  assert.equal(tools.tools.some(t=>t.name==='recommend_skills'),false);
+  const listed=await client.callTool({name:'list_skills',arguments:{query:'frontend-design',conversationId:'chat-A'}});
+  assert.equal(listed.isError,undefined);assert.match(listed.content[0].text,/frontend-design/);
   const selected=await client.callTool({name:'set_conversation_skills',arguments:{conversationId:'chat-A',skillIds:[id]}});assert.notEqual(selected.isError,true);
   const loaded=await client.callTool({name:'load_skill',arguments:{conversationId:'chat-A',skillId:id,turnId:'turn-1'}});assert.match(loaded.content[0].text,/# Workflow/);
   assert.equal(f.app.store.stats()[id].loaded,1);assert.deepEqual(f.app.store.conversation('chat-A').selection,[id]);

@@ -4,7 +4,6 @@ import { mkdir,writeFile,readFile,symlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fixture } from './helpers.mjs';
 import { parseSkill,normalizeRepo,globalEnabled } from '../server/catalog.mjs';
-import { recommend } from '../server/recommend.mjs';
 import { promptHook,observeHook } from '../server/hooks.mjs';
 test('proper YAML parsing, folded text and source validation',()=>{
   const m=parseSkill('---\nname: demo\ndescription: >-\n  Write code:\n  inspect "facts".\nmetadata:\n  source: https://github.com/a/b\n---\n');
@@ -24,9 +23,14 @@ test('config selectors use ordered path and name rules',()=>{
   assert.equal(globalEnabled({skills:{config:[{name:'demo',enabled:false},{path:s.path,enabled:true}]}},s),true);
   assert.equal(globalEnabled({skills:{config:[{path:'/tmp/b/SKILL.md',enabled:false}]}},s),true);
 });
-test('Chinese task recommendation is contextual and never auto selects',async t=>{
-  const f=await fixture(t);await f.skill('frontend-design','Design page layout and UI');await f.skill('pdf','Read and create PDF documents');await f.skill('pytorch-training','Train neural models');
-  const {skills}=await f.app.catalog.scan();const r=recommend(skills,'设计界面的卡片配色');assert.equal(skills.find(s=>s.id===r[0].id).name,'frontend-design');assert.equal(recommend(skills,'').length,0);assert.equal(f.app.store.conversations().length,0);
+test('message Hook binds the conversation without recommending or automatically selecting skills',async t=>{
+  const f=await fixture(t);await f.skill('frontend-design','Design page layout and UI');await f.skill('pdf','Read PDF documents');
+  const result=await promptHook(f.app,{session_id:'A',cwd:f.home,prompt:'请设计界面的卡片配色并制作文档，这是当前项目的完整任务描述。',turn_id:'one'});
+  const context=result.hookSpecificOutput.additionalContext;
+  assert.match(context,/conversation=A/);assert.doesNotMatch(context,/适用候选|推荐|frontend-design|pdf/);
+  assert.deepEqual(f.app.store.conversation('A').selection,[]);
+  assert.equal(f.app.store.setting('task:A'),null);assert.equal(f.app.store.setting('recommend:A'),null);
+  assert.equal(Object.hasOwn(await f.app.snapshot({conversationId:'A',runtime:false}),'recommendations'),false);
 });
 test('conversation-only use of globally disabled skill never modifies config or another conversation',async t=>{
   const f=await fixture(t);const path=await f.skill('demo','Useful workflow');await writeFile(f.config.config,`[[skills.config]]\npath = ${JSON.stringify(path)}\nenabled = false\n`);
@@ -58,18 +62,16 @@ test('repository cache groups requests, preserves last good value on failure and
   await f.app.stars({force:true,fetcher:async()=>{throw new Error('offline');}});assert.equal(f.app.store.repo('owner/repo').stars,45);assert.equal(f.app.store.repo('owner/repo').status,'error');
 });
 
-test('browser ambient text cannot influence recommendations or stored Hook task',async t=>{
+test('browser ambient text is removed from stored and historical message snippets',async t=>{
   const f=await fixture(t);await f.skill('frontend-design','Design frontend UI in the browser');await f.skill('pdf','Read PDF documents');
   const ambient='<in-app-browser-context source="ambient-ui-state">\nUI browser design supplied not user. Current URL: http://localhost/?category=design\n</in-app-browser-context>';
   const wrapped=ambient+'\n\n## My request:\n请读取 PDF 文档';
-  const {skills}=await f.app.catalog.scan();assert.deepEqual(recommend(skills,wrapped),recommend(skills,'请读取 PDF 文档'));assert.deepEqual(recommend(skills,ambient),[]);
-  assert.equal(skills.find(s=>s.id===recommend(skills,wrapped)[0].id).name,'pdf');
   await promptHook(f.app,{session_id:'clean',cwd:f.home,prompt:wrapped,turn_id:'one'});
   assert.equal(f.app.store.conversation('clean').prompt,'请读取 PDF 文档');
   // Previously persisted polluted text is cleaned when read, including short follow-ups.
-  f.app.store.touchConversation({id:'old',cwd:f.home,prompt:wrapped});f.app.store.setSetting('task:old',wrapped);
+  f.app.store.touchConversation({id:'old',cwd:f.home,prompt:wrapped});
   const old=await f.app.snapshot({conversationId:'old',runtime:false});assert.equal(old.conversation.prompt,'请读取 PDF 文档');assert.equal(old.conversations.find(c=>c.id==='old').prompt,'请读取 PDF 文档');
-  await promptHook(f.app,{session_id:'old',cwd:f.home,prompt:'继续',turn_id:'two'});assert.ok(!f.app.store.setting('recommend:old').includes(skills.find(s=>s.name==='frontend-design').id));
+  await promptHook(f.app,{session_id:'old',cwd:f.home,prompt:'继续',turn_id:'two'});assert.equal(f.app.store.setting('recommend:old'),null);
   const empty=await promptHook(f.app,{session_id:'empty',cwd:f.home,prompt:ambient,turn_id:'three'});assert.doesNotMatch(empty.hookSpecificOutput.additionalContext,/本轮出现/);
 });
 test('conversation states distinguish saved selection, delivered instructions and observed reads',async t=>{
