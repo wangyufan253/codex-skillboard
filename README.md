@@ -27,7 +27,7 @@ npm ci
 npm start
 ```
 
-打开 [本地工作台](http://127.0.0.1:43821/)。服务只监听 `127.0.0.1`。
+启动后，打开终端输出的本机地址。服务只监听本机，不同电脑之间互不占用端口；如果本机端口冲突，可设置 `SKILL_WORKBENCH_PORT` 换用一个空闲端口。安装 MCP／Hook 接入时使用相同的端口设置，安装程序会保存该设置。
 
 ## 接入 Codex
 
@@ -103,7 +103,7 @@ npm test
 
 ## 开发与反馈
 
-`npm run dev` 启动开发服务。`npm test` 包含需要本机 Codex CLI 的隔离集成测试；`npm run test:ui:serve` 启动独立的浏览器测试页，地址为 `http://127.0.0.1:43823/?conversation=chat-A&view=all`，该页面会执行测试并修改临时数据，不会使用真实聊天。测试结果可从 `/ui-test-result` 获取。
+`npm run dev` 启动开发服务。`npm test` 包含需要本机 Codex CLI 的隔离集成测试。浏览器回归测试的运行方式见 [开发测试说明](docs/testing.md)。
 
 欢迎提交 [Issue](https://github.com/wangyufan253/codex-skillboard/issues) 或 Pull Request。提交问题时请附 Node、Codex 和操作系统版本，并删除日志里的聊天、个人路径与凭据。涉及私密信息时参见 [安全与隐私说明](SECURITY.md)。
 

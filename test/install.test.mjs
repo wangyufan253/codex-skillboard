@@ -15,12 +15,23 @@ test('installer is idempotent and uninstall preserves unrelated MCP and hooks',a
   const {server}=createWorkbenchServer(f.app);await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>new Promise(r=>server.close(r)));
   const env={...process.env,CODEX_HOME:f.config.codex,SKILL_WORKBENCH_HOME:f.config.data,SKILL_WORKBENCH_USER_HOME:f.home,SKILL_WORKBENCH_PORT:String(server.address().port),CODEX_THREAD_ID:'installer-test-chat'};
   const run=args=>promisify(execFile)(process.execPath,[projectRoot+'/scripts/install.mjs',...args],{cwd:projectRoot,env,timeout:25000});
-  await run([]);await run([]);
+  await run([]);
+  // Upgrade an old registration, then reinstall without accumulating our own hooks.
+  const legacy=JSON.parse(await readFile(f.config.codex+'/hooks.json','utf8'));
+  const quote=value=>"'"+value.replace(/'/g,"'\\''")+"'";
+  legacy.hooks.UserPromptSubmit[0].hooks[0].command=quote(process.execPath)+' '+quote(projectRoot+'/scripts/hook.mjs');
+  await writeFile(f.config.codex+'/hooks.json',JSON.stringify(legacy));await run([]);await run([]);
   const hooks=JSON.parse(await readFile(f.config.codex+'/hooks.json','utf8'));
   assert.equal(hooks.hooks.UserPromptSubmit.length,1);assert.equal(hooks.hooks.PostToolUse.length,2);assert.deepEqual(hooks.hooks.PostToolUse[0],original.hooks.PostToolUse[0]);
   assert.match('exec_command',new RegExp(hooks.hooks.PostToolUse[1].matcher));
+  assert.ok(hooks.hooks.UserPromptSubmit[0].hooks[0].command.includes('SKILL_WORKBENCH_PORT='),'Hook must keep the installed custom port when Codex runs without installer environment');
   const installed=parse(await readFile(f.config.config,'utf8'));assert.ok(installed.mcp_servers['skill-workbench']);assert.equal(installed.mcp_servers.unrelated.command,'example');
   assert.deepEqual(installed.mcp_servers.unrelated.args,[]);
+  assert.equal(installed.mcp_servers['skill-workbench'].env.SKILL_WORKBENCH_PORT,env.SKILL_WORKBENCH_PORT);
+  const path=await f.skill('port-probe','Check local hook configuration');const id=(await f.app.catalog.scan(true)).skills[0].id;
+  const hostEnv={...process.env};for(const key of Object.keys(hostEnv))if(key.startsWith('SKILL_WORKBENCH_')||key==='CODEX_HOME')delete hostEnv[key];
+  await new Promise((resolve,reject)=>{const child=execFile('/bin/sh',['-c',hooks.hooks.PostToolUse[1].hooks[0].command],{env:hostEnv,timeout:10000},error=>error?reject(error):resolve());child.stdin.end(JSON.stringify({hook_event_name:'PostToolUse',session_id:'installed-hook',cwd:f.home,turn_id:'one',tool_name:'exec_command',tool_input:{cmd:`cat '${path}'`},tool_response:{exit_code:0}}));});
+  assert.equal(f.app.store.stats()[id].loaded,1,'Hook uses installed data and user directories even without shell environment');
   await run(['--uninstall']);
   const config=parse(await readFile(f.config.config,'utf8'));assert.equal(config.mcp_servers['skill-workbench'],undefined);assert.equal(config.mcp_servers.unrelated.command,'example');
   assert.deepEqual(config.mcp_servers.unrelated.args,[]);
